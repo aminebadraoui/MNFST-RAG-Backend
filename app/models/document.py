@@ -18,7 +18,7 @@ class DocumentStatus(str, Enum):
     ERROR = "error"
 
 
-class Document(SQLModel, BaseSQLModel, table=True):
+class Document(BaseSQLModel, table=True):
     """Document model with database fields"""
     
     __tablename__ = "documents"

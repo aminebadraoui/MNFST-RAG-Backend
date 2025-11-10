@@ -17,6 +17,10 @@ dependencies = [
     "pydantic>=2.5.0",
     "pydantic-settings>=2.1.0",
     "httpx>=0.25.2",
+    "pyjwt>=2.8.0",
+    "bcrypt>=4.1.2",
+    "alembic>=1.13.0",
+    "sqlalchemy>=2.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]

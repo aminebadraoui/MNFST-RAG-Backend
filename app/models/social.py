@@ -19,7 +19,7 @@ class SocialPlatform(str, Enum):
     OTHER = "other"
 
 
-class SocialLink(SQLModel, BaseSQLModel, table=True):
+class SocialLink(BaseSQLModel, table=True):
     """Social link model with database fields"""
     
     __tablename__ = "social_links"

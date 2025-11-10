@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from .base import BaseSQLModel
 
 
-class Tenant(SQLModel, BaseSQLModel, table=True):
+class Tenant(BaseSQLModel, table=True):
     """Tenant model with database fields"""
     
     __tablename__ = "tenants"

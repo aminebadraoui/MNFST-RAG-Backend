@@ -17,7 +17,7 @@ class UserRole(str, Enum):
     USER = "user"
 
 
-class User(SQLModel, BaseSQLModel, table=True):
+class User(BaseSQLModel, table=True):
     """User model with database fields"""
     
     __tablename__ = "users"

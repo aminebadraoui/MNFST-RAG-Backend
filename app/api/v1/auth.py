@@ -8,6 +8,7 @@ from app.schemas.auth import (
     LoginRequest, LoginResponse, RefreshTokenRequest,
     RefreshTokenResponse, SuccessResponse
 )
+from app.schemas.response import DataResponse
 from app.schemas.user import UserRead
 from app.services.auth import auth_service
 from app.dependencies.auth import get_current_active_user
@@ -22,7 +23,7 @@ from app.config import settings
 router = APIRouter()
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post("/login", response_model=DataResponse[LoginResponse])
 async def login(request: LoginRequest) -> Any:
     """
     User login
@@ -55,7 +56,10 @@ async def login(request: LoginRequest) -> Any:
             "expires_in": settings.jwt_access_token_expire_minutes * 60
         }
         
-        return LoginResponse(user=user_read, tokens=tokens)
+        return DataResponse(
+            data=LoginResponse(user=user_read, tokens=tokens),
+            message="Login successful"
+        )
     
     except InvalidCredentialsError:
         raise
@@ -66,7 +70,7 @@ async def login(request: LoginRequest) -> Any:
         )
 
 
-@router.post("/refresh", response_model=RefreshTokenResponse)
+@router.post("/refresh", response_model=DataResponse[RefreshTokenResponse])
 async def refresh_token(request: RefreshTokenRequest) -> Any:
     """
     Refresh access token
@@ -80,9 +84,12 @@ async def refresh_token(request: RefreshTokenRequest) -> Any:
         
         access_token, refresh_token = tokens
         
-        return RefreshTokenResponse(
-            access_token=access_token,
-            expires_in=settings.jwt_access_token_expire_minutes * 60
+        return DataResponse(
+            data=RefreshTokenResponse(
+                access_token=access_token,
+                expires_in=settings.jwt_access_token_expire_minutes * 60
+            ),
+            message="Token refreshed successfully"
         )
     
     except InvalidTokenError:
@@ -94,7 +101,7 @@ async def refresh_token(request: RefreshTokenRequest) -> Any:
         )
 
 
-@router.post("/logout", response_model=SuccessResponse)
+@router.post("/logout", response_model=DataResponse[dict])
 async def logout(
     current_user: User = Depends(get_current_active_user)
 ) -> Any:
@@ -106,13 +113,13 @@ async def logout(
     # The client should discard the tokens
     # In a more advanced implementation, we might maintain a blacklist
     
-    return SuccessResponse(
-        success=True,
+    return DataResponse(
+        data={},
         message="Logged out successfully"
     )
 
 
-@router.get("/me", response_model=UserRead)
+@router.get("/me", response_model=DataResponse[UserRead])
 async def get_current_user(
     current_user: User = Depends(get_current_active_user)
 ) -> Any:
@@ -120,12 +127,15 @@ async def get_current_user(
     Get current user
     Get information about the currently authenticated user
     """
-    return UserRead(
-        id=str(current_user.id),
-        email=current_user.email,
-        name=current_user.name,
-        role=current_user.role.value,
-        tenant_id=str(current_user.tenant_id) if current_user.tenant_id else None,
-        created_at=current_user.created_at,
-        updated_at=current_user.updated_at
+    return DataResponse(
+        data=UserRead(
+            id=str(current_user.id),
+            email=current_user.email,
+            name=current_user.name,
+            role=current_user.role.value,
+            tenant_id=str(current_user.tenant_id) if current_user.tenant_id else None,
+            created_at=current_user.created_at,
+            updated_at=current_user.updated_at
+        ),
+        message="User retrieved successfully"
     )

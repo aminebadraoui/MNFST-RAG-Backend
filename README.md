@@ -33,20 +33,20 @@ mnfst-rag-backend/
 │   ├── main.py                 # FastAPI application entry point
 │   ├── config.py               # Configuration settings
 │   ├── database.py             # Database connection setup
-│   ├── models/                 # SQLModel data models
+│   ├── models/                 # Database table models only
 │   │   ├── base.py            # Base model class
-│   │   ├── user.py            # User model
-│   │   ├── tenant.py          # Tenant model
-│   │   ├── document.py        # Document model
-│   │   ├── social.py          # Social link model
-│   │   └── chat.py            # Chat session and message models
-│   ├── schemas/                # Pydantic models for API
+│   │   ├── user.py            # User database model
+│   │   ├── tenant.py          # Tenant database model
+│   │   ├── document.py        # Document database model
+│   │   ├── social.py          # Social link database model
+│   │   └── chat.py            # Chat session and message database models
+│   ├── schemas/                # API schemas only
 │   │   ├── auth.py            # Auth request/response schemas
-│   │   ├── user.py            # User schemas
-│   │   ├── tenant.py          # Tenant schemas
-│   │   ├── document.py        # Document schemas
-│   │   ├── social.py          # Social link schemas
-│   │   └── chat.py            # Chat schemas
+│   │   ├── user.py            # User API schemas
+│   │   ├── tenant.py          # Tenant API schemas
+│   │   ├── document.py        # Document API schemas
+│   │   ├── social.py          # Social link API schemas
+│   │   └── chat.py            # Chat API schemas
 │   ├── api/                    # API routers
 │   │   └── v1/
 │   │       ├── auth.py        # Authentication endpoints
@@ -62,6 +62,8 @@ mnfst-rag-backend/
 ├── .env.example              # Environment variables template
 ├── .gitignore               # Git ignore file
 ├── pyproject.toml           # Project configuration and dependencies
+├── create_superadmin.py     # Script to create superadmin users
+├── CREATE_SUPERADMIN.md     # Documentation for superadmin creation
 └── README.md               # This file
 ```
 
@@ -108,6 +110,25 @@ ALLOWED_ORIGINS=["http://localhost:5173", "http://localhost:3000"]
 SUPABASE_URL=your-supabase-url
 SUPABASE_KEY=your-supabase-key
 ```
+
+### Creating a Superadmin User
+
+Before running the application, you may want to create a superadmin user to manage the system:
+
+```bash
+cd mnfst-rag-backend
+source .venv/bin/activate
+python create_superadmin.py --email admin@example.com --password securepassword123 --name "System Administrator"
+```
+
+Alternatively, using uv:
+
+```bash
+cd mnfst-rag-backend
+uv run python create_superadmin.py --email admin@example.com --password securepassword123 --name "System Administrator"
+```
+
+For more details, see [CREATE_SUPERADMIN.md](CREATE_SUPERADMIN.md).
 
 ### Running the Application
 

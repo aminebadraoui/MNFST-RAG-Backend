@@ -5,11 +5,12 @@ from fastapi import APIRouter, HTTPException, status
 from typing import Any, List
 
 from app.schemas.social import SocialLinkRead, SocialLinkCreate, AddLinkRequest
+from app.schemas.response import DataResponse
 
 router = APIRouter()
 
 
-@router.get("/", response_model=List[SocialLinkRead])
+@router.get("/", response_model=DataResponse[List[SocialLinkRead]])
 async def get_social_links() -> Any:
     """
     Get social links
@@ -17,10 +18,13 @@ async def get_social_links() -> Any:
     """
     # TODO: Implement actual social links retrieval logic
     # For now, return empty list
-    return []
+    return DataResponse(
+        data=[],
+        message="Social links retrieved successfully"
+    )
 
 
-@router.post("/", response_model=SocialLinkRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=DataResponse[SocialLinkRead], status_code=status.HTTP_201_CREATED)
 async def add_social_link(link_data: AddLinkRequest) -> Any:
     """
     Add social link
@@ -31,12 +35,15 @@ async def add_social_link(link_data: AddLinkRequest) -> Any:
     from uuid import uuid4
     from datetime import datetime
     
-    return SocialLinkRead(
-        id=uuid4(),
-        url=link_data.url,
-        platform="other",  # TODO: Detect platform from URL
-        added_at=datetime.utcnow(),
-        tenant_id="mock-tenant-id"
+    return DataResponse(
+        data=SocialLinkRead(
+            id=uuid4(),
+            url=link_data.url,
+            platform="other",  # TODO: Detect platform from URL
+            added_at=datetime.utcnow(),
+            tenant_id="mock-tenant-id"
+        ),
+        message="Social link added successfully"
     )
 
 

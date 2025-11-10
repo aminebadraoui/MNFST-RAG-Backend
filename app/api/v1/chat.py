@@ -8,11 +8,12 @@ from app.schemas.chat import (
     SessionRead, SessionCreate, MessageRead, MessageCreate,
     SendMessageRequest, StreamChunk
 )
+from app.schemas.response import DataResponse
 
 router = APIRouter()
 
 
-@router.get("/", response_model=List[SessionRead])
+@router.get("/", response_model=DataResponse[List[SessionRead]])
 async def get_sessions(
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(20, ge=1, le=100, description="Items per page")
@@ -23,10 +24,13 @@ async def get_sessions(
     """
     # TODO: Implement actual session retrieval logic
     # For now, return empty list
-    return []
+    return DataResponse(
+        data=[],
+        message="Sessions retrieved successfully"
+    )
 
 
-@router.post("/", response_model=SessionRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=DataResponse[SessionRead], status_code=status.HTTP_201_CREATED)
 async def create_session(session_data: SessionCreate) -> Any:
     """
     Create chat session
@@ -37,12 +41,15 @@ async def create_session(session_data: SessionCreate) -> Any:
     from uuid import uuid4
     from datetime import datetime
     
-    return SessionRead(
-        id=uuid4(),
-        title=session_data.title,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
-        user_id="mock-user-id"
+    return DataResponse(
+        data=SessionRead(
+            id=uuid4(),
+            title=session_data.title,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            user_id="mock-user-id"
+        ),
+        message="Session created successfully"
     )
 
 
@@ -58,7 +65,7 @@ async def delete_session(session_id: str) -> Any:
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/{session_id}/messages", response_model=List[MessageRead])
+@router.get("/{session_id}/messages", response_model=DataResponse[List[MessageRead]])
 async def get_messages(
     session_id: str,
     page: int = Query(1, ge=1, description="Page number"),
@@ -70,10 +77,13 @@ async def get_messages(
     """
     # TODO: Implement actual message retrieval logic
     # For now, return empty list
-    return []
+    return DataResponse(
+        data=[],
+        message="Messages retrieved successfully"
+    )
 
 
-@router.post("/{session_id}/messages", response_model=MessageRead, status_code=status.HTTP_201_CREATED)
+@router.post("/{session_id}/messages", response_model=DataResponse[MessageRead], status_code=status.HTTP_201_CREATED)
 async def send_message(session_id: str, message_data: SendMessageRequest) -> Any:
     """
     Send message
@@ -84,12 +94,15 @@ async def send_message(session_id: str, message_data: SendMessageRequest) -> Any
     from uuid import uuid4
     from datetime import datetime
     
-    return MessageRead(
-        id=uuid4(),
-        session_id=session_id,
-        content=message_data.content,
-        role=message_data.role,
-        timestamp=datetime.utcnow()
+    return DataResponse(
+        data=MessageRead(
+            id=uuid4(),
+            session_id=session_id,
+            content=message_data.content,
+            role=message_data.role,
+            timestamp=datetime.utcnow()
+        ),
+        message="Message sent successfully"
     )
 
 

@@ -16,7 +16,7 @@ class MessageRole(str, Enum):
     ASSISTANT = "assistant"
 
 
-class Session(SQLModel, BaseSQLModel, table=True):
+class Session(BaseSQLModel, table=True):
     """Chat session model with database fields"""
     
     __tablename__ = "sessions"
@@ -28,7 +28,7 @@ class Session(SQLModel, BaseSQLModel, table=True):
     messages: list["Message"] = Relationship(back_populates="session")
 
 
-class Message(SQLModel, BaseSQLModel, table=True):
+class Message(BaseSQLModel, table=True):
     """Message model with database fields"""
     
     __tablename__ = "messages"

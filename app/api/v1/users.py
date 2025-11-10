@@ -6,6 +6,7 @@ from typing import Any, List
 from sqlmodel import select
 
 from app.schemas.user import UserRead, UserCreate, UserUpdate
+from app.schemas.response import DataResponse
 from app.models.user import User, UserRole
 from app.dependencies.auth import (
     get_current_active_user,
@@ -24,7 +25,7 @@ from app.exceptions.auth import (
 router = APIRouter()
 
 
-@router.get("/", response_model=List[UserRead])
+@router.get("/", response_model=DataResponse[List[UserRead]])
 async def get_users(
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
@@ -49,7 +50,7 @@ async def get_users(
         users = session.exec(statement).all()
         
         # Convert to UserRead schema
-        return [
+        user_data = [
             UserRead(
                 id=str(user.id),
                 email=user.email,
@@ -61,6 +62,11 @@ async def get_users(
             )
             for user in users
         ]
+        
+        return DataResponse(
+            data=user_data,
+            message="Users retrieved successfully"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -68,7 +74,7 @@ async def get_users(
         )
 
 
-@router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=DataResponse[UserRead], status_code=status.HTTP_201_CREATED)
 async def create_user(
     user_data: UserCreate,
     current_user: User = Depends(require_tenant_admin),
@@ -105,7 +111,7 @@ async def create_user(
             tenant_id=str(tenant_id) if tenant_id else None
         )
         
-        return UserRead(
+        user_data = UserRead(
             id=str(user.id),
             email=user.email,
             name=user.name,
@@ -113,6 +119,11 @@ async def create_user(
             tenant_id=str(user.tenant_id) if user.tenant_id else None,
             created_at=user.created_at,
             updated_at=user.updated_at
+        )
+        
+        return DataResponse(
+            data=user_data,
+            message="User created successfully"
         )
     except UserAlreadyExistsError:
         raise HTTPException(
@@ -126,7 +137,7 @@ async def create_user(
         )
 
 
-@router.get("/{user_id}", response_model=UserRead)
+@router.get("/{user_id}", response_model=DataResponse[UserRead])
 async def get_user(
     user_id: str,
     current_user: User = Depends(get_current_active_user),
@@ -155,7 +166,7 @@ async def get_user(
                 raise AuthorizationError()
         # Superadmins can see any user
         
-        return UserRead(
+        user_data = UserRead(
             id=str(user.id),
             email=user.email,
             name=user.name,
@@ -163,6 +174,11 @@ async def get_user(
             tenant_id=str(user.tenant_id) if user.tenant_id else None,
             created_at=user.created_at,
             updated_at=user.updated_at
+        )
+        
+        return DataResponse(
+            data=user_data,
+            message="User retrieved successfully"
         )
     except UserNotFoundError:
         raise HTTPException(
@@ -181,7 +197,7 @@ async def get_user(
         )
 
 
-@router.put("/{user_id}", response_model=UserRead)
+@router.put("/{user_id}", response_model=DataResponse[UserRead])
 async def update_user(
     user_id: str,
     user_data: UserUpdate,
@@ -221,7 +237,7 @@ async def update_user(
         session.commit()
         session.refresh(user)
         
-        return UserRead(
+        user_data = UserRead(
             id=str(user.id),
             email=user.email,
             name=user.name,
@@ -229,6 +245,11 @@ async def update_user(
             tenant_id=str(user.tenant_id) if user.tenant_id else None,
             created_at=user.created_at,
             updated_at=user.updated_at
+        )
+        
+        return DataResponse(
+            data=user_data,
+            message="User updated successfully"
         )
     except UserNotFoundError:
         raise HTTPException(

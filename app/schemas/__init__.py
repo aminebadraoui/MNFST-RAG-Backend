@@ -13,6 +13,7 @@ from .chat import (
     SessionRead, SessionCreate, MessageRead, MessageCreate,
     SendMessageRequest, StreamChunk
 )
+from .response import DataResponse, ErrorResponse
 
 __all__ = [
     # Auth schemas
@@ -51,4 +52,8 @@ __all__ = [
     "MessageCreate",
     "SendMessageRequest",
     "StreamChunk",
+    
+    # Response schemas
+    "DataResponse",
+    "ErrorResponse",
 ]
