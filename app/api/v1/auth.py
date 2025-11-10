@@ -5,10 +5,19 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Any
 
 from app.schemas.auth import (
-    LoginRequest, LoginResponse, RefreshTokenRequest, 
+    LoginRequest, LoginResponse, RefreshTokenRequest,
     RefreshTokenResponse, SuccessResponse
 )
 from app.schemas.user import UserRead
+from app.services.auth import auth_service
+from app.dependencies.auth import get_current_active_user
+from app.models.user import User
+from app.exceptions.auth import (
+    InvalidCredentialsError,
+    InvalidTokenError,
+    AuthenticationError
+)
+from app.config import settings
 
 router = APIRouter()
 
@@ -19,25 +28,42 @@ async def login(request: LoginRequest) -> Any:
     User login
     Authenticate user with email and password, return JWT tokens
     """
-    # TODO: Implement actual authentication logic
-    # For now, return mock data
-    mock_user = UserRead(
-        id="mock-user-id",
-        email=request.email,
-        name="Mock User",
-        role="user",
-        tenant_id="mock-tenant-id",
-        created_at="2023-01-01T00:00:00Z",
-        updated_at=None
-    )
+    try:
+        # Authenticate user
+        user = auth_service.authenticate_user(request.email, request.password)
+        if not user:
+            raise InvalidCredentialsError()
+        
+        # Generate tokens
+        access_token, refresh_token = auth_service.create_tokens(user)
+        
+        # Convert user to UserRead schema
+        user_read = UserRead(
+            id=str(user.id),
+            email=user.email,
+            name=user.name,
+            role=user.role.value,
+            tenant_id=str(user.tenant_id) if user.tenant_id else None,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
+        
+        # Create response
+        tokens = {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "expires_in": settings.jwt_access_token_expire_minutes * 60
+        }
+        
+        return LoginResponse(user=user_read, tokens=tokens)
     
-    mock_tokens = {
-        "access_token": "mock-access-token",
-        "refresh_token": "mock-refresh-token",
-        "expires_in": 3600
-    }
-    
-    return LoginResponse(user=mock_user, tokens=mock_tokens)
+    except InvalidCredentialsError:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred during login: {str(e)}"
+        )
 
 
 @router.post("/refresh", response_model=RefreshTokenResponse)
@@ -46,22 +72,40 @@ async def refresh_token(request: RefreshTokenRequest) -> Any:
     Refresh access token
     Refresh JWT access token using refresh token
     """
-    # TODO: Implement actual token refresh logic
-    # For now, return mock data
-    return RefreshTokenResponse(
-        access_token="new-mock-access-token",
-        expires_in=3600
-    )
+    try:
+        # Refresh tokens
+        tokens = auth_service.refresh_access_token(request.refresh_token)
+        if not tokens:
+            raise InvalidTokenError()
+        
+        access_token, refresh_token = tokens
+        
+        return RefreshTokenResponse(
+            access_token=access_token,
+            expires_in=settings.jwt_access_token_expire_minutes * 60
+        )
+    
+    except InvalidTokenError:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred during token refresh: {str(e)}"
+        )
 
 
 @router.post("/logout", response_model=SuccessResponse)
-async def logout() -> Any:
+async def logout(
+    current_user: User = Depends(get_current_active_user)
+) -> Any:
     """
     User logout
     Logout user and invalidate tokens
     """
-    # TODO: Implement actual logout logic
-    # For now, return success response
+    # With stateless JWT tokens, we don't need to do anything server-side
+    # The client should discard the tokens
+    # In a more advanced implementation, we might maintain a blacklist
+    
     return SuccessResponse(
         success=True,
         message="Logged out successfully"
@@ -69,19 +113,19 @@ async def logout() -> Any:
 
 
 @router.get("/me", response_model=UserRead)
-async def get_current_user() -> Any:
+async def get_current_user(
+    current_user: User = Depends(get_current_active_user)
+) -> Any:
     """
     Get current user
     Get information about the currently authenticated user
     """
-    # TODO: Implement actual user retrieval logic
-    # For now, return mock data
     return UserRead(
-        id="mock-user-id",
-        email="user@example.com",
-        name="Mock User",
-        role="user",
-        tenant_id="mock-tenant-id",
-        created_at="2023-01-01T00:00:00Z",
-        updated_at=None
+        id=str(current_user.id),
+        email=current_user.email,
+        name=current_user.name,
+        role=current_user.role.value,
+        tenant_id=str(current_user.tenant_id) if current_user.tenant_id else None,
+        created_at=current_user.created_at,
+        updated_at=current_user.updated_at
     )

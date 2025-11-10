@@ -4,7 +4,7 @@ User model
 from datetime import datetime
 from enum import Enum
 from sqlmodel import SQLModel, Field, Relationship
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from uuid import UUID
 
 from .base import BaseSQLModel
@@ -17,14 +17,17 @@ class UserRole(str, Enum):
     USER = "user"
 
 
-class UserBase(SQLModel):
-    """Base user model"""
+class User(SQLModel, BaseSQLModel, table=True):
+    """User model with database fields"""
+    
+    __tablename__ = "users"
+    
     email: str = Field(index=True, description="User's email address")
     name: str = Field(description="User's full name")
     role: UserRole = Field(description="User role in the system")
     tenant_id: Optional[UUID] = Field(
         default=None,
-        foreign_key="tenant.id",
+        foreign_key="tenants.id",
         index=True,
         description="Tenant ID (null for superadmin)"
     )
@@ -32,36 +35,14 @@ class UserBase(SQLModel):
         default=None,
         description="Last login timestamp"
     )
-
-
-class User(UserBase, BaseSQLModel, table=True):
-    """User model with database fields"""
     
-    __tablename__ = "users"
+    # Password hash
+    password_hash: str = Field(description="Hashed password")
     
     # Relationships
     tenant: Optional["Tenant"] = Relationship(back_populates="users")
 
 
-class UserCreate(UserBase):
-    """User creation model"""
-    password: str = Field(description="User password")
-
-
-class UserRead(UserBase):
-    """User read model"""
-    id: UUID
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-
-class UserUpdate(SQLModel):
-    """User update model"""
-    name: Optional[str] = None
-    role: Optional[UserRole] = None
-
-
 # Import Tenant here to avoid circular imports
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .tenant import Tenant

@@ -1,5 +1,5 @@
 """
-SQLModel data models
+Models package - Database table models only
 """
 from .base import BaseSQLModel
 from .user import User, UserRole

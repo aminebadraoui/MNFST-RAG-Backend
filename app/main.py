@@ -6,9 +6,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.database import create_db_and_tables
 from app.utils.logger import setup_logging, get_logger
 from app.api.v1 import auth, tenants, users, documents, social, chat
+from app.middleware.auth import AuthenticationMiddleware
 
 # Setup logging
 setup_logging()
@@ -19,9 +19,6 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     logger.info("Starting MNFST-RAG Backend API")
-    # Create database tables
-    create_db_and_tables()
-    logger.info("Database tables created")
     yield
     logger.info("Application shutdown")
 
@@ -35,6 +32,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Add authentication middleware
+app.add_middleware(AuthenticationMiddleware)
 
 # Add CORS middleware
 app.add_middleware(

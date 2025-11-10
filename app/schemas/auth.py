@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from uuid import UUID
 
-from ..models.user import UserRead
+from .user import UserRead
 
 
 class LoginRequest(BaseModel):

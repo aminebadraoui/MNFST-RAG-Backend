@@ -1,12 +1,12 @@
 """
-Pydantic schemas for API
+Schemas package - API schemas only
 """
 from .auth import LoginRequest, LoginResponse, RefreshTokenRequest, RefreshTokenResponse
 from .user import UserRead, UserCreate, UserUpdate
 from .tenant import TenantRead, TenantCreate, TenantUpdate
 from .document import (
-    DocumentRead, DocumentCreate, PresignedUrlResponse, 
-    RegisterUploadRequest, UploadStatusResponse
+    DocumentRead, DocumentCreate, PresignedUrlResponse,
+    RegisterUploadRequest, UploadStatusResponse, DocumentUploadStatus
 )
 from .social import SocialLinkRead, SocialLinkCreate, AddLinkRequest
 from .chat import (
@@ -17,7 +17,7 @@ from .chat import (
 __all__ = [
     # Auth schemas
     "LoginRequest",
-    "LoginResponse", 
+    "LoginResponse",
     "RefreshTokenRequest",
     "RefreshTokenResponse",
     
@@ -37,6 +37,7 @@ __all__ = [
     "PresignedUrlResponse",
     "RegisterUploadRequest",
     "UploadStatusResponse",
+    "DocumentUploadStatus",
     
     # Social schemas
     "SocialLinkRead",

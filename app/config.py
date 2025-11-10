@@ -4,6 +4,7 @@ Application configuration settings
 from typing import List
 from pydantic_settings import BaseSettings
 from pydantic import Field
+import secrets
 
 
 class Settings(BaseSettings):
@@ -17,7 +18,7 @@ class Settings(BaseSettings):
     # Database
     database_url: str = Field(
         default="postgresql://user:password@localhost:5432/mnfst_rag",
-        description="Database connection URL"
+        description="Database connection URL (use Supabase URL in production)"
     )
     
     # CORS
@@ -26,12 +27,26 @@ class Settings(BaseSettings):
         description="Allowed CORS origins"
     )
     
-    # Supabase (optional)
-    supabase_url: str = Field(default="", description="Supabase URL")
-    supabase_key: str = Field(default="", description="Supabase API key")
+    # JWT Settings
+    jwt_secret_key: str = Field(
+        default_factory=lambda: secrets.token_urlsafe(32),
+        description="Secret key for JWT token signing"
+    )
+    jwt_algorithm: str = Field(default="HS256", description="JWT algorithm")
+    jwt_access_token_expire_minutes: int = Field(
+        default=60, description="Access token expiration time in minutes"
+    )
+    jwt_refresh_token_expire_days: int = Field(
+        default=30, description="Refresh token expiration time in days"
+    )
+    
+    # Password Settings
+    password_min_length: int = Field(default=8, description="Minimum password length")
+    password_salt_rounds: int = Field(default=12, description="bcrypt salt rounds")
     
     class Config:
         env_file = ".env"
+        env_file_encoding = 'utf-8'
         case_sensitive = False
 
 
