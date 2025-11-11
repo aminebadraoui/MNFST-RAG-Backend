@@ -77,12 +77,28 @@ async def refresh_token(request: RefreshTokenRequest) -> Any:
     Refresh JWT access token using refresh token
     """
     try:
+        # Log the incoming request for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Refresh token request received: {request}")
+        
+        # Check if refresh token is provided
+        if not request.refresh_token:
+            logger.error("No refresh token provided in request")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Refresh token is required"
+            )
+        
         # Refresh tokens
         tokens = auth_service.refresh_access_token(request.refresh_token)
         if not tokens:
+            logger.error("Invalid refresh token")
             raise InvalidTokenError()
         
         access_token, refresh_token = tokens
+        
+        logger.info("Token refreshed successfully")
         
         return DataResponse(
             data=RefreshTokenResponse(
@@ -94,7 +110,12 @@ async def refresh_token(request: RefreshTokenRequest) -> Any:
     
     except InvalidTokenError:
         raise
+    except HTTPException:
+        raise
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error during token refresh: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred during token refresh: {str(e)}"

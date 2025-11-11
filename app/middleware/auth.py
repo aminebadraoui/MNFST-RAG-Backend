@@ -48,9 +48,12 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 request.state.user_role = payload.get("role")
                 request.state.tenant_id = payload.get("tenant_id")
                 request.state.token_payload = payload
-        except Exception:
+        except Exception as e:
             # Invalid token, continue without authentication
             # The route will handle authentication if needed
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Token validation error: {str(e)}")
             pass
         
         return await call_next(request)

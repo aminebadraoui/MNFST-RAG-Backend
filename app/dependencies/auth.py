@@ -2,7 +2,7 @@
 Authentication dependencies for FastAPI routes
 """
 from typing import Optional
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import Session
 
@@ -165,28 +165,32 @@ def require_tenant_access(
 
 
 def get_optional_current_user(
-    token: Optional[str] = Depends(get_token_from_credentials)
+    request: Request = None
 ) -> Optional[User]:
     """
     Get current user if token is provided, without raising exceptions
     
     Args:
-        token: JWT token (optional)
+        request: FastAPI Request object
         
     Returns:
         Current user if token is valid, None otherwise
     """
-    if not token:
+    if not request:
         return None
-    
-    try:
-        payload = jwt_service.validate_access_token(token)
-        if not payload:
-            return None
         
-        return auth_service.get_user_from_token(token)
-    except Exception:
-        return None
+    # Check if user info is already in request state from middleware
+    if hasattr(request.state, 'user_id') and request.state.user_id:
+        session = next(get_session())
+        try:
+            from sqlmodel import select
+            statement = select(User).where(User.id == request.state.user_id)
+            user = session.exec(statement).first()
+            return user
+        finally:
+            session.close()
+    
+    return None
 
 
 # Common role dependencies
