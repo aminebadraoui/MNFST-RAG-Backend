@@ -47,8 +47,8 @@ async def add_social_link(link_data: AddLinkRequest) -> Any:
     )
 
 
-@router.delete("/{link_id}")
-async def delete_social_link(link_id: str) -> Any:
+@router.delete("/{linkId}")
+async def delete_social_link(linkId: str) -> Any:
     """
     Delete social link
     Remove a social media link from current tenant (tenant admin only)

@@ -78,8 +78,8 @@ async def register_upload(request: RegisterUploadRequest) -> Any:
     )
 
 
-@router.get("/upload/{upload_id}/status", response_model=DataResponse[UploadStatusResponse])
-async def get_upload_status(upload_id: str) -> Any:
+@router.get("/upload/{uploadId}/status", response_model=DataResponse[UploadStatusResponse])
+async def get_upload_status(uploadId: str) -> Any:
     """
     Get upload status
     Get processing status for multiple document upload (tenant admin only)
@@ -88,7 +88,7 @@ async def get_upload_status(upload_id: str) -> Any:
     # For now, return mock data
     return DataResponse(
         data=UploadStatusResponse(
-            upload_id=upload_id,
+            upload_id=uploadId,
             status="completed",
             documents=[]
         ),
@@ -96,8 +96,8 @@ async def get_upload_status(upload_id: str) -> Any:
     )
 
 
-@router.delete("/{document_id}")
-async def delete_document(document_id: str) -> Any:
+@router.delete("/{documentId}")
+async def delete_document(documentId: str) -> Any:
     """
     Delete document
     Delete a document and its processed data (tenant admin only)

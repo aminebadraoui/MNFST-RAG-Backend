@@ -53,8 +53,8 @@ async def create_session(session_data: SessionCreate) -> Any:
     )
 
 
-@router.delete("/{session_id}")
-async def delete_session(session_id: str) -> Any:
+@router.delete("/{sessionId}")
+async def delete_session(sessionId: str) -> Any:
     """
     Delete chat session
     Delete a chat session and all its messages
@@ -65,9 +65,9 @@ async def delete_session(session_id: str) -> Any:
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/{session_id}/messages", response_model=DataResponse[List[MessageRead]])
+@router.get("/{sessionId}/messages", response_model=DataResponse[List[MessageRead]])
 async def get_messages(
-    session_id: str,
+    sessionId: str,
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(20, ge=1, le=100, description="Items per page")
 ) -> Any:
@@ -83,8 +83,8 @@ async def get_messages(
     )
 
 
-@router.post("/{session_id}/messages", response_model=DataResponse[MessageRead], status_code=status.HTTP_201_CREATED)
-async def send_message(session_id: str, message_data: SendMessageRequest) -> Any:
+@router.post("/{sessionId}/messages", response_model=DataResponse[MessageRead], status_code=status.HTTP_201_CREATED)
+async def send_message(sessionId: str, message_data: SendMessageRequest) -> Any:
     """
     Send message
     Send a message to a chat session
@@ -97,7 +97,7 @@ async def send_message(session_id: str, message_data: SendMessageRequest) -> Any
     return DataResponse(
         data=MessageRead(
             id=uuid4(),
-            session_id=session_id,
+            session_id=sessionId,
             content=message_data.content,
             role=message_data.role,
             timestamp=datetime.utcnow()
@@ -106,8 +106,8 @@ async def send_message(session_id: str, message_data: SendMessageRequest) -> Any
     )
 
 
-@router.post("/{session_id}/messages/stream")
-async def send_message_stream(session_id: str, message_data: SendMessageRequest) -> Any:
+@router.post("/{sessionId}/messages/stream")
+async def send_message_stream(sessionId: str, message_data: SendMessageRequest) -> Any:
     """
     Send message with streaming
     Send a message to a chat session with streaming response

@@ -137,9 +137,9 @@ async def create_user(
         )
 
 
-@router.get("/{user_id}", response_model=DataResponse[UserRead])
+@router.get("/{userId}", response_model=DataResponse[UserRead])
 async def get_user(
-    user_id: str,
+    userId: str,
     current_user: User = Depends(get_current_active_user),
     session = Depends(get_session)
 ) -> Any:
@@ -149,7 +149,7 @@ async def get_user(
     """
     try:
         # Find user
-        statement = select(User).where(User.id == user_id)
+        statement = select(User).where(User.id == userId)
         user = session.exec(statement).first()
         
         if not user:
@@ -197,9 +197,9 @@ async def get_user(
         )
 
 
-@router.put("/{user_id}", response_model=DataResponse[UserRead])
+@router.put("/{userId}", response_model=DataResponse[UserRead])
 async def update_user(
-    user_id: str,
+    userId: str,
     user_data: UserUpdate,
     current_user: User = Depends(get_current_active_user),
     session = Depends(get_session)
@@ -210,7 +210,7 @@ async def update_user(
     """
     try:
         # Find user
-        statement = select(User).where(User.id == user_id)
+        statement = select(User).where(User.id == userId)
         user = session.exec(statement).first()
         
         if not user:
@@ -268,9 +268,9 @@ async def update_user(
         )
 
 
-@router.delete("/{user_id}")
+@router.delete("/{userId}")
 async def delete_user(
-    user_id: str,
+    userId: str,
     current_user: User = Depends(require_tenant_admin),
     session = Depends(get_session)
 ) -> Any:
@@ -280,7 +280,7 @@ async def delete_user(
     """
     try:
         # Find user
-        statement = select(User).where(User.id == user_id)
+        statement = select(User).where(User.id == userId)
         user = session.exec(statement).first()
         
         if not user:

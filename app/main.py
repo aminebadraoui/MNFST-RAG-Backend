@@ -9,6 +9,7 @@ from app.config import settings
 from app.utils.logger import setup_logging, get_logger
 from app.api.v1 import auth, tenants, users, documents, social, chat
 from app.middleware.auth import AuthenticationMiddleware
+from app.middleware.response_transform import ResponseTransformMiddleware
 
 # Setup logging
 setup_logging()
@@ -35,6 +36,9 @@ app = FastAPI(
 
 # Add authentication middleware
 app.add_middleware(AuthenticationMiddleware)
+
+# Add response transformation middleware
+app.add_middleware(ResponseTransformMiddleware)
 
 # Add CORS middleware
 app.add_middleware(

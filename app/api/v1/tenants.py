@@ -11,13 +11,15 @@ from app.schemas.tenant import (
     TenantReadWithAdmin
 )
 from app.schemas.response import DataResponse
-from app.services.tenant import tenant_service
+from app.services.tenant import TenantService, tenant_service
+from app.services.tenant_creation import tenant_creation_service
+from app.database import get_session
 from app.dependencies.auth import require_superadmin
 
 router = APIRouter()
 
 
-@router.get("", response_model=DataResponse[List[TenantRead]])
+@router.get("", response_model=DataResponse[List[TenantReadWithAdmin]])
 async def get_tenants(
     current_user = Depends(require_superadmin)
 ) -> Any:
@@ -32,14 +34,30 @@ async def get_tenants(
         tenants_with_stats = []
         for tenant in tenants:
             stats = tenant_service.get_tenant_stats(str(tenant.id))
-            tenant_read = TenantRead(
+            # Get admin user for this tenant
+            from app.models.user import User, UserRole
+            from sqlmodel import select
+            
+            admin_statement = select(User).where(
+                User.tenant_id == tenant.id,
+                User.role == UserRole.TENANT_ADMIN
+            )
+            admin_user = tenant_service.session.exec(admin_statement).first()
+            
+            tenant_read = TenantReadWithAdmin(
                 id=tenant.id,
                 name=tenant.name,
                 slug=tenant.slug,
                 created_at=tenant.created_at,
                 updated_at=tenant.updated_at,
                 user_count=stats["user_count"],
-                document_count=stats["document_count"]
+                document_count=stats["document_count"],
+                admin_user={
+                    "id": str(admin_user.id) if admin_user else None,
+                    "email": admin_user.email if admin_user else None,
+                    "name": admin_user.name if admin_user else None,
+                    "role": admin_user.role.value if admin_user else None
+                } if admin_user else None
             )
             tenants_with_stats.append(tenant_read)
         
@@ -64,7 +82,7 @@ async def create_tenant(
     Create a new tenant with admin user (superadmin only)
     """
     try:
-        tenant, admin_user = tenant_service.create_tenant_with_admin(tenant_data)
+        tenant, admin_user = tenant_creation_service.create_tenant_with_admin(tenant_data)
         
         tenant_response = TenantReadWithAdmin(
             id=tenant.id,
@@ -98,9 +116,9 @@ async def create_tenant(
         )
 
 
-@router.get("/{tenant_id}", response_model=DataResponse[TenantRead])
+@router.get("/{tenantId}", response_model=DataResponse[TenantRead])
 async def get_tenant(
-    tenant_id: str,
+    tenantId: str,
     current_user = Depends(require_superadmin)
 ) -> Any:
     """
@@ -108,14 +126,14 @@ async def get_tenant(
     Retrieve specific tenant information (superadmin only)
     """
     try:
-        tenant = tenant_service.get_tenant_by_id(tenant_id)
+        tenant = tenant_service.get_tenant_by_id(tenantId)
         if not tenant:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Tenant not found"
             )
         
-        stats = tenant_service.get_tenant_stats(tenant_id)
+        stats = tenant_service.get_tenant_stats(tenantId)
         
         tenant_response = TenantRead(
             id=tenant.id,
@@ -140,9 +158,9 @@ async def get_tenant(
         )
 
 
-@router.put("/{tenant_id}", response_model=DataResponse[TenantRead])
+@router.put("/{tenantId}", response_model=DataResponse[TenantRead])
 async def update_tenant(
-    tenant_id: str,
+    tenantId: str,
     tenant_data: TenantUpdate,
     current_user = Depends(require_superadmin)
 ) -> Any:
@@ -151,14 +169,14 @@ async def update_tenant(
     Update tenant information (superadmin only)
     """
     try:
-        tenant = tenant_service.update_tenant(tenant_id, tenant_data)
+        tenant = tenant_service.update_tenant(tenantId, tenant_data)
         if not tenant:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Tenant not found"
             )
         
-        stats = tenant_service.get_tenant_stats(tenant_id)
+        stats = tenant_service.get_tenant_stats(tenantId)
         
         tenant_response = TenantRead(
             id=tenant.id,
@@ -188,9 +206,9 @@ async def update_tenant(
         )
 
 
-@router.delete("/{tenant_id}")
+@router.delete("/{tenantId}")
 async def delete_tenant(
-    tenant_id: str,
+    tenantId: str,
     current_user = Depends(require_superadmin)
 ) -> Any:
     """
@@ -198,7 +216,7 @@ async def delete_tenant(
     Delete a tenant and all associated data (superadmin only)
     """
     try:
-        deleted = tenant_service.delete_tenant_cascade(tenant_id)
+        deleted = tenant_service.delete_tenant_cascade(tenantId)
         if not deleted:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
