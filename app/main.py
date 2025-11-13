@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.utils.logger import setup_logging, get_logger
-from app.api.v1 import auth, tenants, users, documents, social, chat
+from app.api.v1 import auth, tenants, users, documents, social, chat, chats
 from app.middleware.auth import AuthenticationMiddleware
 from app.middleware.response_transform import ResponseTransformMiddleware
 
@@ -56,6 +56,7 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
 app.include_router(social.router, prefix="/api/v1/social-links", tags=["Social"])
 app.include_router(chat.router, prefix="/api/v1/sessions", tags=["Chat"])
+app.include_router(chats.router, prefix="/api/v1/chats", tags=["Chats"])
 
 
 @app.get("/")

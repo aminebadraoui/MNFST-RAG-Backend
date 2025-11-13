@@ -41,8 +41,10 @@ class User(BaseSQLModel, table=True):
     
     # Relationships
     tenant: Optional["Tenant"] = Relationship(back_populates="users")
+    sessions: list["Session"] = Relationship(back_populates="user")
 
 
-# Import Tenant here to avoid circular imports
+# Import Tenant and Session here to avoid circular imports
 if TYPE_CHECKING:
     from .tenant import Tenant
+    from .chat import Session

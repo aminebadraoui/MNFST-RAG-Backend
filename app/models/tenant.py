@@ -17,8 +17,10 @@ class Tenant(BaseSQLModel, table=True):
     
     # Relationships
     users: list["User"] = Relationship(back_populates="tenant")
+    chats: list["Chat"] = Relationship(back_populates="tenant")
 
 
-# Import User here to avoid circular imports
+# Import User and Chat here to avoid circular imports
 if TYPE_CHECKING:
     from .user import User
+    from .chat import Chat
