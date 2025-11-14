@@ -105,9 +105,9 @@ All API responses follow a consistent format:
 |--------|----------|-------------|
 | GET | `/api/v1/tenants` | List all tenants |
 | POST | `/api/v1/tenants` | Create new tenant |
-| GET | `/api/v1/tenants/{tenant_id}` | Get tenant details |
-| PUT | `/api/v1/tenants/{tenant_id}` | Update tenant |
-| DELETE | `/api/v1/tenants/{tenant_id}` | Delete tenant |
+| GET | `/api/v1/tenants/{tenantId}` | Get tenant details |
+| PUT | `/api/v1/tenants/{tenantId}` | Update tenant |
+| DELETE | `/api/v1/tenants/{tenantId}` | Delete tenant |
 
 ### Users (Tenant admin only)
 
@@ -115,9 +115,9 @@ All API responses follow a consistent format:
 |--------|----------|-------------|
 | GET | `/api/v1/users` | List users (tenant-scoped) |
 | POST | `/api/v1/users` | Create new user |
-| GET | `/api/v1/users/{user_id}` | Get user details |
-| PUT | `/api/v1/users/{user_id}` | Update user |
-| DELETE | `/api/v1/users/{user_id}` | Delete user |
+| GET | `/api/v1/users/{userId}` | Get user details |
+| PUT | `/api/v1/users/{userId}` | Update user |
+| DELETE | `/api/v1/users/{userId}` | Delete user |
 
 ### Documents (Tenant admin only)
 
@@ -126,8 +126,8 @@ All API responses follow a consistent format:
 | GET | `/api/v1/documents` | List documents (tenant-scoped) |
 | POST | `/api/v1/documents/presigned-url` | Get presigned upload URL |
 | POST | `/api/v1/documents/register-upload` | Register uploaded document |
-| GET | `/api/v1/documents/upload/{upload_id}/status` | Get upload status |
-| DELETE | `/api/v1/documents/{document_id}` | Delete document |
+| GET | `/api/v1/documents/upload/{uploadId}/status` | Get upload status |
+| DELETE | `/api/v1/documents/{documentId}` | Delete document |
 
 ### Social Links (Tenant admin only)
 
@@ -135,7 +135,7 @@ All API responses follow a consistent format:
 |--------|----------|-------------|
 | GET | `/api/v1/social-links` | List social links (tenant-scoped) |
 | POST | `/api/v1/social-links` | Add social link |
-| DELETE | `/api/v1/social-links/{link_id}` | Delete social link |
+| DELETE | `/api/v1/social-links/{linkId}` | Delete social link |
 
 ### Chat (Authenticated users)
 
@@ -143,10 +143,10 @@ All API responses follow a consistent format:
 |--------|----------|-------------|
 | GET | `/api/v1/sessions` | List chat sessions (user-scoped) |
 | POST | `/api/v1/sessions` | Create chat session |
-| DELETE | `/api/v1/sessions/{session_id}` | Delete chat session |
-| GET | `/api/v1/sessions/{session_id}/messages` | Get chat messages |
-| POST | `/api/v1/sessions/{session_id}/messages` | Send message |
-| POST | `/api/v1/sessions/{session_id}/messages/stream` | Send message with streaming |
+| DELETE | `/api/v1/sessions/{sessionId}` | Delete chat session |
+| GET | `/api/v1/sessions/{sessionId}/messages` | Get chat messages |
+| POST | `/api/v1/sessions/{sessionId}/messages` | Send message |
+| POST | `/api/v1/sessions/{sessionId}/messages/stream` | Send message with streaming |
 
 ## Multi-Tenancy
 
@@ -185,7 +185,7 @@ X-Tenant-ID: 123e4567-e89b-12d3-a456-426614174000
 List endpoints support pagination using query parameters:
 
 ```
-GET /api/v1/users?page=1&limit=20&sort=name&order=asc
+GET /api/v1/users?page=1&limit=20&sort=created_at&order=desc
 ```
 
 ### Parameters
@@ -296,8 +296,8 @@ curl -X POST "http://localhost:8000/api/v1/documents/presigned-url" \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "original_name": "document.pdf",
-    "size": 1024000,
+    "file_name": "document.pdf",
+    "file_size": 1024000,
     "mime_type": "application/pdf"
   }'
 
