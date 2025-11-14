@@ -1,7 +1,7 @@
 """
 Chat management endpoints
 """
-from fastapi import APIRouter, HTTPException, status, Query, Depends
+from fastapi import APIRouter, HTTPException, status, Query, Depends, Response
 from typing import Any, List
 
 from app.schemas.chat import (
@@ -150,50 +150,53 @@ async def get_chat(
 async def update_chat(
     chatId: str,
     chat_data: ChatUpdate,
-    current_user: User = Depends(require_tenant_admin)
+    current_user: User = Depends(require_tenant_admin),
+    session = Depends(get_session)
 ) -> Any:
     """
     Update chat
     Update chat information (tenant admin only)
     """
     try:
-        # First verify chat exists and belongs to user's tenant
-        existing_chat = chat_service.get_chat_by_id(chatId)
-        if not existing_chat:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Chat not found"
+        # Create a new ChatService instance with the request's session
+        with ChatService(session) as chat_service:
+            # First verify chat exists and belongs to user's tenant
+            existing_chat = chat_service.get_chat_by_id(chatId)
+            if not existing_chat:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Chat not found"
+                )
+            
+            if str(existing_chat.tenant_id) != str(current_user.tenant_id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied"
+                )
+            
+            chat = chat_service.update_chat(chatId, chat_data.dict(exclude_unset=True))
+            if not chat:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Chat not found"
+                )
+            
+            stats = chat_service.get_chat_stats(chatId)
+            
+            chat_response = ChatRead(
+                id=chat.id,
+                name=chat.name,
+                system_prompt=chat.system_prompt,
+                created_at=chat.created_at,
+                updated_at=chat.updated_at,
+                tenant_id=chat.tenant_id,
+                session_count=stats["session_count"]
             )
-        
-        if str(existing_chat.tenant_id) != str(current_user.tenant_id):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
+            
+            return DataResponse(
+                data=chat_response,
+                message="Chat updated successfully"
             )
-        
-        chat = chat_service.update_chat(chatId, chat_data)
-        if not chat:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Chat not found"
-            )
-        
-        stats = chat_service.get_chat_stats(chatId)
-        
-        chat_response = ChatRead(
-            id=chat.id,
-            name=chat.name,
-            system_prompt=chat.system_prompt,
-            created_at=chat.created_at,
-            updated_at=chat.updated_at,
-            tenant_id=chat.tenant_id,
-            session_count=stats["session_count"]
-        )
-        
-        return DataResponse(
-            data=chat_response,
-            message="Chat updated successfully"
-        )
     except HTTPException:
         raise
     except ValueError as e:
@@ -239,7 +242,6 @@ async def delete_chat(
                 detail="Chat not found"
             )
         
-        from fastapi import Response
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except HTTPException:
         raise

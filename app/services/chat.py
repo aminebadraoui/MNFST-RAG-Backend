@@ -62,7 +62,9 @@ class ChatService(BaseService):
                 chat.name = chat_data["name"]
             
             if "system_prompt" in chat_data:
-                chat.system_prompt = chat_data["system_prompt"]
+                # Convert empty string to None to maintain consistency
+                system_prompt = chat_data["system_prompt"]
+                chat.system_prompt = system_prompt if system_prompt else None
             
             self.session.commit()
             self.session.refresh(chat)
