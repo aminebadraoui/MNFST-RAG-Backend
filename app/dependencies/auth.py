@@ -181,14 +181,11 @@ def get_optional_current_user(
         
     # Check if user info is already in request state from middleware
     if hasattr(request.state, 'user_id') and request.state.user_id:
-        session = next(get_session())
-        try:
+        with next(get_session()) as session:
             from sqlmodel import select
             statement = select(User).where(User.id == request.state.user_id)
             user = session.exec(statement).first()
             return user
-        finally:
-            session.close()
     
     return None
 

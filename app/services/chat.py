@@ -9,6 +9,7 @@ from app.models.chat import Chat, Session, Message
 from app.models.user import User
 from app.services.base import BaseService
 from app.database import get_session
+from app.utils.text import clamp_text
 
 
 class ChatService(BaseService):
@@ -102,12 +103,15 @@ class ChatService(BaseService):
     
     def get_chat_sessions(self, chat_id: str, user_id: Optional[str] = None) -> list[Session]:
         """Get sessions for a chat, optionally filtered by user"""
-        statement = select(Session).where(Session.chat_id == UUID(chat_id))
+        # Build the base query with chat_id filter
+        conditions = [Session.chat_id == UUID(chat_id)]
         
+        # Add user_id filter if provided
         if user_id:
-            statement = statement.where(Session.user_id == UUID(user_id))
+            conditions.append(Session.user_id == UUID(user_id))
         
-        statement = statement.order_by(desc(Session.updated_at))
+        # Create the statement with all conditions
+        statement = select(Session).where(*conditions).order_by(desc(Session.updated_at))
         return self.session.exec(statement).all()
     
     def create_session(self, chat_id: str, user_id: str, title: str) -> Session:
@@ -146,24 +150,45 @@ class ChatService(BaseService):
         ).order_by(asc(Message.timestamp))
         return self.session.exec(statement).all()
     
+    def has_messages(self, session_id: str) -> bool:
+        """Check if a session has any messages"""
+        try:
+            statement = select(func.count(Message.id)).where(Message.session_id == UUID(session_id))
+            count = self.session.exec(statement).one()
+            return count > 0
+        except Exception as e:
+            self.session.rollback()
+            raise e
+    
     def create_message(self, session_id: str, content: str, role: str) -> Message:
         """Create a new message"""
-        message = Message(
-            content=content,
-            role=role,
-            session_id=UUID(session_id)
-        )
-        self.session.add(message)
-        self.session.commit()
-        self.session.refresh(message)
-        return message
+        try:
+            # Check if this is the first message in the session
+            is_first_message = not self.has_messages(session_id)
+            
+            message = Message(
+                content=content,
+                role=role,
+                session_id=UUID(session_id)
+            )
+            self.session.add(message)
+            
+            # If this is the first user message, update the session title
+            if is_first_message and role == "user":
+                session = self.get_session_by_id(session_id)
+                if session:
+                    session.title = clamp_text(content, 50, "...")
+                    self.session.add(session)
+            
+            self.session.commit()
+            self.session.refresh(message)
+            return message
+        except Exception as e:
+            self.session.rollback()
+            raise e
 
 
-# Create singleton instance
-def get_chat_service() -> ChatService:
-    """Get chat service instance"""
-    return ChatService(next(get_session()))
-
-
-# Create a global instance to be used across the application
-chat_service = get_chat_service()
+# Create a factory function for the service
+def get_chat_service(session: Session) -> ChatService:
+    """Get chat service instance with proper session injection"""
+    return ChatService(session=session)

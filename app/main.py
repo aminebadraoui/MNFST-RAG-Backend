@@ -74,3 +74,20 @@ async def root():
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy"}
+
+
+@app.get("/health/db-pool")
+async def db_pool_health():
+    """Database connection pool health check"""
+    from app.database import get_pool_status
+    try:
+        pool_status = get_pool_status()
+        return {
+            "status": "healthy",
+            "pool": pool_status
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }

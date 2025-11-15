@@ -4,13 +4,14 @@ Chat sessions and messages endpoints
 from fastapi import APIRouter, HTTPException, status, Query, Depends, Response
 from fastapi.responses import StreamingResponse
 from typing import Any, List
+from sqlmodel import Session
 
 from app.schemas.chat import (
     SessionRead, SessionCreate, MessageRead, MessageCreate,
     SendMessageRequest, StreamChunk
 )
 from app.schemas.response import DataResponse
-from app.services.chat import chat_service
+from app.services.chat import get_chat_service
 from app.database import get_session
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -24,17 +25,36 @@ async def get_sessions(
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     chat_id: str = Query(None, description="Chat ID to filter sessions"),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db_session: Session = Depends(get_session)
 ) -> Any:
     """
     Get chat sessions
-    Retrieve all chat sessions for current user, optionally filtered by chat
+    Retrieve all chat sessions for current user, optionally filtered by chat.
+    If no sessions exist for the chat, creates a default session.
     """
     try:
-        sessions = chat_service.get_chat_sessions(
+        chat_service_instance = get_chat_service(db_session)
+        sessions = chat_service_instance.get_chat_sessions(
             chat_id=chat_id,
             user_id=str(current_user.id)
         )
+        
+        # If no sessions exist for this chat and user, create a default session
+        if chat_id and not sessions:
+            try:
+                # Verify the chat exists and belongs to the user's tenant
+                chat = chat_service_instance.get_chat_by_id(chat_id)
+                if chat and str(chat.tenant_id) == str(current_user.tenant_id):
+                    default_session = chat_service_instance.create_session(
+                        chat_id=chat_id,
+                        user_id=str(current_user.id),
+                        title="New Chat Session"
+                    )
+                    sessions = [default_session]
+            except Exception as e:
+                # Log the error but continue with empty sessions list
+                print(f"Failed to create default session: {e}")
         
         session_reads = []
         for session in sessions:
@@ -62,26 +82,28 @@ async def get_sessions(
 @router.post("/", response_model=DataResponse[SessionRead], status_code=status.HTTP_201_CREATED)
 async def create_session(
     session_data: SessionCreate,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db_session: Session = Depends(get_session)
 ) -> Any:
     """
     Create chat session
     Create a new chat session for current user
     """
     try:
-        session = chat_service.create_session(
+        chat_service_instance = get_chat_service(db_session)
+        db_session = chat_service_instance.create_session(
             chat_id=str(session_data.chat_id),
             user_id=str(current_user.id),
             title=session_data.title
         )
         
         session_read = SessionRead(
-            id=session.id,
-            title=session.title,
-            created_at=session.created_at,
-            updated_at=session.updated_at,
-            user_id=session.user_id,
-            chat_id=session.chat_id
+            id=db_session.id,
+            title=db_session.title,
+            created_at=db_session.created_at,
+            updated_at=db_session.updated_at,
+            user_id=db_session.user_id,
+            chat_id=db_session.chat_id
         )
         
         return DataResponse(
@@ -98,28 +120,30 @@ async def create_session(
 @router.delete("/{sessionId}")
 async def delete_session(
     sessionId: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db_session: Session = Depends(get_session)
 ) -> Any:
     """
     Delete chat session
     Delete a chat session and all its messages
     """
     try:
+        chat_service_instance = get_chat_service(db_session)
         # First verify session exists and belongs to user
-        session = chat_service.get_session_by_id(sessionId)
-        if not session:
+        session_obj = chat_service_instance.get_session_by_id(sessionId)
+        if not session_obj:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Session not found"
             )
         
-        if str(session.user_id) != str(current_user.id):
+        if str(session_obj.user_id) != str(current_user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied"
             )
         
-        deleted = chat_service.delete_session_cascade(sessionId)
+        deleted = chat_service_instance.delete_session_cascade(sessionId)
         if not deleted:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -141,28 +165,30 @@ async def get_messages(
     sessionId: str,
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db_session: Session = Depends(get_session)
 ) -> Any:
     """
     Get chat messages
     Retrieve all messages in a chat session
     """
     try:
+        chat_service_instance = get_chat_service(db_session)
         # First verify session exists and belongs to user
-        session = chat_service.get_session_by_id(sessionId)
-        if not session:
+        session_obj = chat_service_instance.get_session_by_id(sessionId)
+        if not session_obj:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Session not found"
             )
         
-        if str(session.user_id) != str(current_user.id):
+        if str(session_obj.user_id) != str(current_user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied"
             )
         
-        messages = chat_service.get_session_messages(sessionId)
+        messages = chat_service_instance.get_session_messages(sessionId)
         
         message_reads = []
         for message in messages:
@@ -192,33 +218,35 @@ async def get_messages(
 async def send_message(
     sessionId: str,
     message_data: SendMessageRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db_session: Session = Depends(get_session)
 ) -> Any:
     """
     Send message
     Send a message to a chat session
     """
     try:
+        chat_service_instance = get_chat_service(db_session)
         # First verify session exists and belongs to user
-        session = chat_service.get_session_by_id(sessionId)
-        if not session:
+        session_obj = chat_service_instance.get_session_by_id(sessionId)
+        if not session_obj:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Session not found"
             )
         
-        if str(session.user_id) != str(current_user.id):
+        if str(session_obj.user_id) != str(current_user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied"
             )
         
         # Get the chat to retrieve system prompt
-        chat = chat_service.get_chat_by_id(str(session.chat_id))
+        chat = chat_service_instance.get_chat_by_id(str(session_obj.chat_id))
         system_prompt = chat.system_prompt if chat else None
         
         # Store the user message
-        message = chat_service.create_message(
+        message = chat_service_instance.create_message(
             session_id=sessionId,
             content=message_data.content,
             role=message_data.role
@@ -228,7 +256,7 @@ async def send_message(
         static_response_content = f"Message received, here is all the data I received: message: '{message_data.content}', user_id: '{current_user.id}', tenant_id: '{current_user.tenant_id}', session_id: '{sessionId}', system_prompt: '{system_prompt}'"
         
         # Create and store the assistant response
-        assistant_message = chat_service.create_message(
+        assistant_message = chat_service_instance.create_message(
             session_id=sessionId,
             content=static_response_content,
             role="assistant"
@@ -259,33 +287,35 @@ async def send_message(
 async def send_message_stream(
     sessionId: str,
     message_data: SendMessageRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db_session: Session = Depends(get_session)
 ) -> StreamingResponse:
     """
     Send message with streaming
     Send a message to a chat session with streaming response using Server-Sent Events (SSE)
     """
     try:
+        chat_service_instance = get_chat_service(db_session)
         # First verify session exists and belongs to user
-        session = chat_service.get_session_by_id(sessionId)
-        if not session:
+        session_obj = chat_service_instance.get_session_by_id(sessionId)
+        if not session_obj:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Session not found"
             )
         
-        if str(session.user_id) != str(current_user.id):
+        if str(session_obj.user_id) != str(current_user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied"
             )
         
         # Get the chat to retrieve system prompt
-        chat = chat_service.get_chat_by_id(str(session.chat_id))
+        chat = chat_service_instance.get_chat_by_id(str(session_obj.chat_id))
         system_prompt = chat.system_prompt if chat else None
         
         # Store the user message
-        user_message = chat_service.create_message(
+        user_message = chat_service_instance.create_message(
             session_id=sessionId,
             content=message_data.content,
             role=message_data.role
@@ -295,18 +325,28 @@ async def send_message_stream(
         static_response_content = f"Message received, here is all the data I received: message: '{message_data.content}', user_id: '{current_user.id}', tenant_id: '{current_user.tenant_id}', session_id: '{sessionId}', system_prompt: '{system_prompt}'"
         
         # Create and store the assistant response
-        assistant_message = chat_service.create_message(
+        assistant_message = chat_service_instance.create_message(
             session_id=sessionId,
             content=static_response_content,
             role="assistant"
         )
+        
+        # Ensure we have a valid message ID - it should be populated after commit
+        if not assistant_message.id:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create message - no ID generated"
+            )
+        
+        # Cast to UUID to satisfy type checker
+        message_id = assistant_message.id  # Type: ignore
         
         # Create the streaming response
         async def generate_stream():
             try:
                 async for chunk in stream_response_as_sse(
                     response_content=static_response_content,
-                    message_id=assistant_message.id,
+                    message_id=message_id,
                     chunk_size=3,  # Send 3 words at a time
                     delay=0.1     # 100ms delay between chunks
                 ):
